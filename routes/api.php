@@ -15,5 +15,6 @@ Route::apiResource('players', PlayerController::class);
 Route::post('/register', [JWTAuthController::class, 'register']);
 Route::post('/login', [JWTAuthController::class, 'login']);
 Route::get('/user', [JWTAuthController::class, 'getUser']);
+Route::post('/user',[JWTAuthController::class, 'updateProfile']);
 Route::post('/logout', [JWTAuthController::class, 'logout']);
 

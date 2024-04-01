@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Tymon\JWTAuth\Exceptions\JWTException;
 use Tymon\JWTAuth\Facades\JWTAuth;
@@ -77,9 +79,11 @@ class JWTAuthController extends Controller
         } catch (JWTException $e) {
             return $this->sendError([], $e->getMessage(), 500);
         }
+        $user = Auth::user();
+        $payload = JWTAuth::customClaims(['Role' => 'User'])->fromUser($user);
 
         $success = [
-            'token' => $token,
+            'token' => $payload,
         ];
         return $this->sendResponse($success, 'successful login', 200);
     }
@@ -96,6 +100,34 @@ class JWTAuthController extends Controller
         }
 
         return $this->sendResponse($user, "user data retrieved", 200);
+    }
+
+    public function updateProfile(Request $request)
+    {
+        try {
+            $user = JWTAuth::parseToken()->authenticate();
+            if (!$user) {
+                return $this->sendError([], "user not found", 403);
+            }
+        } catch (JWTException $e) {
+            return $this->sendError([], $e->getMessage(), 500);
+        }
+
+        $request->validate([
+            'image' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
+        ]);
+
+        if ($request->hasFile('image')) {
+            $path = $request->file('image')->store('public/images');
+            $url = asset(Storage::url($path));
+
+            $user->image = $url;
+            $user->save();
+
+            return response()->json(['message' => 'Profile updated successfully', 'image_url' => $url]);
+        }
+
+        return response()->json(['message' => 'No image uploaded'], 400);
     }
 
     public function logout()
